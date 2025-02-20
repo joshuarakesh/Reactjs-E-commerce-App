@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Define image name
+# Define image name as per our choice
 IMAGE_NAME="myreactapp-image"
 
 echo "Building the Docker image..."
