@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Define image name
+# Define image name _i have given
 IMAGE_NAME="myreactapp-image"
 
 echo "Pulling the latest Docker image..."
