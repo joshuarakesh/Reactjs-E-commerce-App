@@ -5,15 +5,14 @@ pipeline {
         DOCKER_DEV_REPO = "joshuarakesh/dev"   // Dev Docker Hub repo
         DOCKER_PROD_REPO = "joshuarakesh/prod" // Prod Docker Hub repo
         GIT_REPO = "https://github.com/joshuarakesh/Reactjs-E-commerce-App.git"
-        BRANCH_NAME = "dev"  // Default branch (this should be set dynamically)
     }
 
     stages {
         stage('Clone Repository') {
             steps {
                 script {
-                    checkout scm
-                    BRANCH_NAME = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+                    git branch: 'dev', credentialsId: 'github-token', url: env.GIT_REPO
+                    env.BRANCH_NAME = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
                 }
             }
         }
@@ -21,8 +20,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                    IMAGE_TAG = "${env.DOCKER_DEV_REPO}:${COMMIT_HASH}"
+                    env.COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    def IMAGE_TAG = "${env.DOCKER_DEV_REPO}:${env.COMMIT_HASH}"
 
                     sh "docker build -t ${IMAGE_TAG} ."
                     sh "docker tag ${IMAGE_TAG} ${env.DOCKER_DEV_REPO}:latest"
@@ -43,7 +42,7 @@ pipeline {
             steps {
                 script {
                     sh "docker push ${env.DOCKER_DEV_REPO}:latest"
-                    sh "docker push ${env.DOCKER_DEV_REPO}:${COMMIT_HASH}"
+                    sh "docker push ${env.DOCKER_DEV_REPO}:${env.COMMIT_HASH}"
                 }
             }
         }
@@ -52,12 +51,11 @@ pipeline {
             when { expression { env.BRANCH_NAME == 'master' } }
             steps {
                 script {
-                    COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                    IMAGE_TAG = "${env.DOCKER_PROD_REPO}:${COMMIT_HASH}"
+                    def IMAGE_TAG = "${env.DOCKER_PROD_REPO}:${env.COMMIT_HASH}"
 
                     sh "docker build -t ${IMAGE_TAG} ."
                     sh "docker tag ${IMAGE_TAG} ${env.DOCKER_PROD_REPO}:latest"
-                    sh "docker push ${env.DOCKER_PROD_REPO}:${COMMIT_HASH}"
+                    sh "docker push ${env.DOCKER_PROD_REPO}:${env.COMMIT_HASH}"
                     sh "docker push ${env.DOCKER_PROD_REPO}:latest"
                 }
             }
