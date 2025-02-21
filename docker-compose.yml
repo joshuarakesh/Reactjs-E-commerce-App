@@ -5,6 +5,6 @@ services:
     image: joshuarakesh/react-app:latest  # Replace with your actual Docker Hub repo
     build: .
     ports:
-      - "80:80"
+      - "8083:80"
     restart: unless-stopped
 
