@@ -2,46 +2,64 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('docker-hub')  // Ensure this exists in Jenkins credentials
-        DOCKER_DEV_REPO = "joshuarakesh/dev"   // Your dev Docker Hub repo
-        DOCKER_PROD_REPO = "joshuarakesh/prod" // Your prod Docker Hub repo
+        DOCKER_DEV_REPO = "joshuarakesh/dev"   // Dev Docker Hub repo
+        DOCKER_PROD_REPO = "joshuarakesh/prod" // Prod Docker Hub repo
+        GIT_REPO = "https://github.com/joshuarakesh/Reactjs-E-commerce-App.git"
+        BRANCH_NAME = "dev"  // Default branch (this should be set dynamically)
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'dev', credentialsId: 'github-token', url: 'https://github.com/joshuarakesh/Reactjs-E-commerce-App.git'
+                script {
+                    checkout scm
+                    BRANCH_NAME = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t ${env.DOCKER_DEV_REPO}:latest .'
+                script {
+                    COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    IMAGE_TAG = "${env.DOCKER_DEV_REPO}:${COMMIT_HASH}"
+
+                    sh "docker build -t ${IMAGE_TAG} ."
+                    sh "docker tag ${IMAGE_TAG} ${env.DOCKER_DEV_REPO}:latest"
+                }
             }
         }
 
         stage('Login to Docker Hub') {
             steps {
-                sh 'echo ${env.DOCKER_HUB_CREDENTIALS_PSW} | docker login -u ${env.DOCKER_HUB_CREDENTIALS_USR} --password-stdin'
+                withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
             }
         }
 
         stage('Push to Docker Hub (Dev)') {
-            when {
-                branch 'dev'
-            }
+            when { expression { env.BRANCH_NAME == 'dev' } }
             steps {
-                sh 'docker push ${env.DOCKER_DEV_REPO}:latest'
+                script {
+                    sh "docker push ${env.DOCKER_DEV_REPO}:latest"
+                    sh "docker push ${env.DOCKER_DEV_REPO}:${COMMIT_HASH}"
+                }
             }
         }
 
         stage('Push to Docker Hub (Prod)') {
-            when {
-                branch 'master'
-            }
+            when { expression { env.BRANCH_NAME == 'master' } }
             steps {
-                sh 'docker build -t ${env.DOCKER_PROD_REPO}:latest .'
-                sh 'docker push ${env.DOCKER_PROD_REPO}:latest'
+                script {
+                    COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    IMAGE_TAG = "${env.DOCKER_PROD_REPO}:${COMMIT_HASH}"
+
+                    sh "docker build -t ${IMAGE_TAG} ."
+                    sh "docker tag ${IMAGE_TAG} ${env.DOCKER_PROD_REPO}:latest"
+                    sh "docker push ${env.DOCKER_PROD_REPO}:${COMMIT_HASH}"
+                    sh "docker push ${env.DOCKER_PROD_REPO}:latest"
+                }
             }
         }
     }
@@ -49,6 +67,7 @@ pipeline {
     post {
         always {
             sh 'docker logout'
+            sh 'docker image prune -f' // Cleanup old images
         }
     }
 }
