@@ -13,6 +13,10 @@ pipeline {
                 script {
                     git branch: 'dev', credentialsId: 'github-token', url: env.GIT_REPO
                     env.BRANCH_NAME = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+
+                    // Debugging: Print branch info
+                    echo "Detected branch: ${env.BRANCH_NAME}"
+                    echo "Jenkins branch: ${env.GIT_BRANCH}"
                 }
             }
         }
@@ -38,7 +42,7 @@ pipeline {
         }
 
         stage('Push to Docker Hub (Dev)') {
-            when { expression { env.BRANCH_NAME == 'dev' } }
+            when { expression { env.BRANCH_NAME == 'dev' || env.GIT_BRANCH == 'origin/dev' } }
             steps {
                 script {
                     sh "docker push ${env.DOCKER_DEV_REPO}:latest"
@@ -48,7 +52,7 @@ pipeline {
         }
 
         stage('Push to Docker Hub (Prod)') {
-            when { expression { env.BRANCH_NAME == 'master' } }
+            when { expression { env.BRANCH_NAME == 'master' || env.GIT_BRANCH == 'origin/master' } }
             steps {
                 script {
                     def IMAGE_TAG = "${env.DOCKER_PROD_REPO}:${env.COMMIT_HASH}"
