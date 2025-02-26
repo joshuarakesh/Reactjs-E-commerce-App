@@ -8,3 +8,4 @@ test
 =======
 test1
 >>>>>>> dev
+Test merge trigger
