@@ -7,5 +7,8 @@ new test
 test
 =======
 test1
+<<<<<<< HEAD
+>>>>>>> dev
+=======
 >>>>>>> dev
 Test merge trigger
