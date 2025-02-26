@@ -6,3 +6,4 @@ new test
 test1
 Test merge trigger
 Test merge new trigger
+test44
