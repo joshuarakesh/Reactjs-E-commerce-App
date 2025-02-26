@@ -13,3 +13,4 @@ test1
 >>>>>>> dev
 Test merge trigger
 Test merge new trigger
+test44
